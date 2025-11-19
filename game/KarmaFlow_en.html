@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project 7: Karma Flow | English Ver.</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Noto+Serif+SC:wght@400;700&display=swap');
+
+        :root {
+            --bg-color: #0a0a0a;
+            --text-color: #e0e0e0;
+            --accent-wood: #00ff9d;
+            --accent-fire: #ff3333;
+            --accent-earth: #ffbd2e;
+            --accent-metal: #e0e0e0;
+            --accent-water: #00ccff;
+            --panel-bg: rgba(20, 20, 20, 0.90);
+            --border-color: #444;
+            --skill-color: #c77dff;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Cinzel', 'Noto Serif SC', serif; /* English serif font priority */
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            user-select: none;
+        }
+
+        #ink-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            opacity: 0.4;
+        }
+
+        #game-container {
+            position: relative;
+            z-index: 10;
+            width: 95%;
+            max-width: 500px;
+            height: 95vh;
+            display: flex;
+            flex-direction: column;
+            background: var(--panel-bg);
+            border: 2px solid var(--border-color);
+            box-shadow: 0 0 20px rgba(0,0,0,0.8);
+            backdrop-filter: blur(5px);
+            border-radius: 8px;
+        }
+
+        /* Colors */
+        .wood { color: var(--accent-wood); text-shadow: 0 0 5px rgba(0, 255, 157, 0.4); }
+        .fire { color: var(--accent-fire); text-shadow: 0 0 5px rgba(255, 51, 51, 0.4); }
+        .earth { color: var(--accent-earth); text-shadow: 0 0 5px rgba(255, 189, 46, 0.4); }
+        .metal { color: var(--accent-metal); text-shadow: 0 0 5px rgba(224, 224, 224, 0.4); }
+        .water { color: var(--accent-water); text-shadow: 0 0 5px rgba(0, 204, 255, 0.4); }
+        
+        .hidden { display: none !important; }
+        
+        /* Buttons */
+        .btn {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--text-color);
+            color: var(--text-color);
+            padding: 8px 12px;
+            font-family: inherit;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin: 3px;
+            position: relative;
+            overflow: hidden;
+            flex: 1;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .btn:hover:not(:disabled) {
+            background: var(--text-color);
+            color: var(--bg-color);
+            box-shadow: 0 0 10px var(--text-color);
+        }
+        .btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+            border-color: #555;
+            color: #555;
+        }
+        .btn-red { border-color: var(--accent-fire); color: var(--accent-fire); }
+        .btn-red:hover:not(:disabled) { background: var(--accent-fire); color: black; box-shadow: 0 0 15px var(--accent-fire); }
+        
+        .btn-skill {
+            border-color: var(--skill-color);
+            color: var(--skill-color);
+            font-size: 0.75rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 55px;
+            line-height: 1.2;
+        }
+        .btn-skill:hover:not(:disabled) {
+            background: var(--skill-color);
+            color: #000;
+            box-shadow: 0 0 10px var(--skill-color);
+        }
+
+        /* Layout */
+        .screen { flex: 1; display: flex; flex-direction: column; padding: 15px; text-align: center; }
+
+        #start-screen h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(to bottom, #fff, #888);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-family: 'Cinzel', serif;
+        }
+
+        #header-ui {
+            display: flex; justify-content: space-between; padding: 8px;
+            border-bottom: 1px solid var(--border-color); background: rgba(0,0,0,0.5);
+            font-size: 0.9rem;
+        }
+
+        #bazi-display { display: flex; justify-content: center; padding: 10px 0; gap: 10px; }
+        .pillar {
+            display: flex; flex-direction: column; align-items: center;
+            border: 1px solid #333; padding: 4px 8px; background: rgba(0,0,0,0.3);
+            min-width: 35px;
+        }
+        .pillar .gan, .pillar .zhi { font-size: 1.2rem; font-weight: bold; font-family: 'Noto Serif SC', serif; }
+        .pillar-label { font-size: 0.6rem; color: #666; text-transform: uppercase; }
+
+        #battle-area {
+            flex: 1; display: flex; flex-direction: column; justify-content: space-between; position: relative;
+        }
+
+        #environment-indicator {
+            text-align: center; padding: 5px; font-size: 0.9rem; border-bottom: 1px solid #333;
+        }
+
+        #scene {
+            flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; position: relative;
+        }
+        
+        #combat-row {
+            display: flex; width: 100%; justify-content: space-around; align-items: center;
+            margin-bottom: 10px;
+        }
+
+        /* New Relation Indicator */
+        #relation-indicator {
+            font-size: 0.9rem;
+            font-weight: bold;
+            margin: 10px 0;
+            padding: 4px 10px;
+            border-radius: 4px;
+            background: rgba(0,0,0,0.5);
+            border: 1px solid #444;
+            animation: fadeIn 0.5s;
+        }
+        @keyframes fadeIn { from { opacity:0; transform: translateY(5px); } to { opacity:1; transform: translateY(0); } }
+
+        .entity { display: flex; flex-direction: column; align-items: center; width: 100px; transition: transform 0.2s; position: relative; }
+        .avatar {
+            width: 70px; height: 70px; border: 2px solid #666; border-radius: 50%;
+            display: flex; justify-content: center; align-items: center; font-size: 2rem;
+            background: #000; box-shadow: 0 0 10px rgba(255,255,255,0.1); z-index: 2;
+            font-family: 'Noto Serif SC', serif;
+        }
+        .status-icons {
+            display: flex; gap: 2px; margin-top: -10px; z-index: 3;
+        }
+        .status-icon {
+            width: 16px; height: 16px; border-radius: 50%; background: #fff; color: #000;
+            font-size: 10px; display: flex; align-items: center; justify-content: center; border: 1px solid #000;
+            font-weight: bold;
+        }
+
+        .hp-bar-container { width: 100%; height: 5px; background: #333; margin-top: 8px; border-radius: 3px; }
+        .hp-bar { height: 100%; background: var(--text-color); width: 100%; transition: width 0.3s; }
+        .entity-element { font-size: 0.7rem; opacity: 0.7; margin-top: 2px; text-transform: uppercase;}
+
+        /* Log */
+        #log-area {
+            height: 120px; overflow-y: auto; background: rgba(0,0,0,0.6); padding: 8px;
+            font-size: 0.8rem; text-align: left; border-top: 1px solid var(--border-color);
+            font-family: monospace; margin-bottom: 5px;
+        }
+        .log-entry { margin-bottom: 3px; line-height: 1.3; }
+        .log-turn { color: #888; margin-top: 5px; border-top: 1px dashed #333; padding-top: 2px;}
+
+        /* Controls */
+        #controls-area { display: flex; flex-direction: column; gap: 5px; padding-bottom: 5px;}
+        .action-row { display: flex; gap: 5px; justify-content: center; padding: 0 5px; }
+        .skill-row { display: flex; gap: 5px; justify-content: center; padding: 0 5px; }
+
+        /* Modals */
+        .modal-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8); z-index: 100;
+            display: flex; justify-content: center; align-items: center;
+        }
+        .modal-content {
+            background: #1a1a1a; border: 2px solid var(--skill-color);
+            padding: 20px; border-radius: 8px; width: 80%; max-width: 300px;
+            text-align: center; box-shadow: 0 0 30px rgba(199, 125, 255, 0.2);
+        }
+        .modal-title { font-size: 1.5rem; color: var(--skill-color); margin-bottom: 15px; font-family: 'Cinzel', serif; }
+        .modal-body { margin-bottom: 20px; font-size: 1rem; line-height: 1.5; }
+        .rps-choices { display: flex; justify-content: center; gap: 10px; }
+        
+        /* Link Effect (Iron Chain) */
+        #link-connector {
+            position: absolute; top: 50%; left: 20%; width: 60%; height: 4px;
+            background: repeating-linear-gradient(90deg, #fff, #fff 10px, transparent 10px, transparent 20px);
+            transform: translateY(-50%); z-index: 1; opacity: 0.5;
+            animation: linkPulse 1s infinite linear;
+        }
+        @keyframes linkPulse { 0% { background-position: 0 0; } 100% { background-position: 20px 0; } }
+
+    </style>
+</head>
+<body>
+
+    <canvas id="ink-canvas"></canvas>
+
+    <div id="game-container">
+        <!-- Start Screen -->
+        <div id="start-screen" class="screen">
+            <div style="flex:1; display:flex; flex-direction:column; justify-content:center;">
+                <h1>KARMA FLOW</h1>
+                <div class="subtitle">Project 7: Destiny Roguelike</div>
+                <div style="font-size: 0.9rem; margin: 20px 0; color: #aaa; line-height: 1.6;">
+                    Born with a Bazi (Destiny Chart).<br>
+                    Master the Five Elements.<br>
+                    Survive the Luck Cycles.<br>
+                </div>
+                <button id="btn-start" class="btn btn-red">Reincarnate (Start)</button>
+            </div>
+        </div>
+
+        <!-- Game Screen -->
+        <div id="game-screen" class="screen hidden">
+            <div id="header-ui">
+                <div class="stat-box">Age: <span id="age-display">0</span></div>
+                <div class="stat-box">Env: <span id="luck-score">-</span></div>
+            </div>
+
+            <!-- Bazi Panel -->
+            <div id="bazi-display">
+                <div class="pillar"><div class="pillar-label">Hr</div><div id="pillar-h" class="gan"></div><div id="pillar-h-z" class="zhi"></div></div>
+                <div class="pillar"><div class="pillar-label">Day</div><div id="pillar-d" class="gan"></div><div id="pillar-d-z" class="zhi"></div></div>
+                <div class="pillar"><div class="pillar-label">Mth</div><div id="pillar-m" class="gan"></div><div id="pillar-m-z" class="zhi"></div></div>
+                <div class="pillar"><div class="pillar-label">Yr</div><div id="pillar-y" class="gan"></div><div id="pillar-y-z" class="zhi"></div></div>
+            </div>
+
+            <!-- Battle Area -->
+            <div id="battle-area">
+                <div id="environment-indicator">
+                    <span id="luck-cycle-name">Era</span> 
+                    <span id="luck-cycle-effect" style="font-size:0.8rem; margin-left:5px;"></span>
+                </div>
+
+                <div id="scene">
+                    <div id="relation-indicator"></div>
+
+                    <div id="combat-row">
+                        <div id="link-connector" class="hidden"></div>
+                        <!-- Player -->
+                        <div class="entity" id="player-entity">
+                            <div class="status-icons" id="player-status"></div>
+                            <div class="avatar" id="player-avatar">?</div>
+                            <div class="entity-name">You</div>
+                            <div class="entity-element" id="player-el-name">WOOD</div>
+                            <div class="hp-bar-container"><div class="hp-bar" id="player-hp-bar"></div></div>
+                            <div style="font-size:0.7rem;"><span id="player-hp"></span>/<span id="player-max-hp"></span></div>
+                        </div>
+
+                        <div style="font-size: 1.2rem; opacity: 0.3; font-family:'Cinzel';">VS</div>
+
+                        <!-- Enemy -->
+                        <div class="entity" id="enemy-entity">
+                            <div class="status-icons" id="enemy-status"></div>
+                            <div class="avatar" id="enemy-avatar">?</div>
+                            <div class="entity-name" id="enemy-name">Demon</div>
+                            <div class="entity-element" id="enemy-el-name">FIRE</div>
+                            <div class="hp-bar-container"><div class="hp-bar" id="enemy-hp-bar" style="background-color: #ff5555;"></div></div>
+                            <div style="font-size:0.7rem;"><span id="enemy-hp"></span>/<span id="enemy-max-hp"></span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Log -->
+            <div id="log-area"></div>
+
+            <!-- Controls -->
+            <div id="controls-area">
+                <div class="action-row">
+                    <button id="btn-attack" class="btn">Attack</button>
+                    <button id="btn-heal" class="btn">Heal</button>
+                </div>
+                <div style="font-size:0.7rem; color:#666; text-align:center; margin: 2px 0;">—— Karma Skills ——</div>
+                <div class="skill-row">
+                    <button id="skill-chain" class="btn btn-skill">
+                        <div>Iron Chain</div>
+                    </button>
+                    <button id="skill-echo" class="btn btn-skill">
+                        <div>Echo Cast</div>
+                    </button>
+                    <button id="skill-rps" class="btn btn-skill">
+                        <div>Fate Duel</div>
+                    </button>
+                    <button id="skill-gambit" class="btn btn-skill">
+                        <div>Gambit</div>
+                    </button>
+                </div>
+                <button id="btn-next" class="btn hidden" style="margin-top:10px;">Next Year</button>
+            </div>
+        </div>
+        
+        <!-- End Screen -->
+        <div id="end-screen" class="screen hidden">
+             <div style="flex:1; display:flex; flex-direction:column; justify-content:center;">
+                <h2 id="end-title">Destiny Fulfilled</h2>
+                <p id="end-reason">Age: 80</p>
+                <button id="btn-restart" class="btn btn-red">Reincarnate</button>
+            </div>
+        </div>
+
+        <!-- Generic Modal -->
+        <div id="modal-overlay" class="modal-overlay hidden">
+            <div class="modal-content">
+                <div id="modal-title" class="modal-title"></div>
+                <div id="modal-body" class="modal-body"></div>
+                <div id="modal-actions"></div>
+            </div>
+        </div>
+    </div>
+
+<script>
+// --- Constants ---
+const ELEMENTS = {
+    WOOD: { name: 'Wood', char: '木', color: 'wood', generates: 'Fire', overcomes: 'Earth' },
+    FIRE: { name: 'Fire', char: '火', color: 'fire', generates: 'Earth', overcomes: 'Metal' },
+    EARTH: { name: 'Earth', char: '土', color: 'earth', generates: 'Metal', overcomes: 'Water' },
+    METAL: { name: 'Metal', char: '金', color: 'metal', generates: 'Water', overcomes: 'Wood' },
+    WATER: { name: 'Water', char: '水', color: 'water', generates: 'Wood', overcomes: 'Fire' }
+};
+
+const STEMS = [
+    { char: '甲', element: 'WOOD' }, { char: '乙', element: 'WOOD' },
+    { char: '丙', element: 'FIRE' }, { char: '丁', element: 'FIRE' },
+    { char: '戊', element: 'EARTH' }, { char: '己', element: 'EARTH' },
+    { char: '庚', element: 'METAL' }, { char: '辛', element: 'METAL' },
+    { char: '壬', element: 'WATER' }, { char: '癸', element: 'WATER' }
+];
+
+const BRANCHES = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
+
+const ENEMY_NAMES = {
+    WOOD: ['Wind Spirit', 'Vine Demon', 'Old Oak'], 
+    FIRE: ['Fire Ghost', 'Heat Wave', 'Ash Wraith'], 
+    EARTH: ['Dust Devil', 'Rock Golem', 'Mud Slime'], 
+    METAL: ['Blade Spirit', 'Iron Construct', 'Sword Soul'], 
+    WATER: ['Water Shade', 'Black Ice', 'Abyss Eye']
+};
+
+const DA_YUN_NAMES = { 
+    WOOD: 'Era of Wood', 
+    FIRE: 'Era of Fire', 
+    EARTH: 'Era of Earth', 
+    METAL: 'Era of Metal', 
+    WATER: 'Era of Water' 
+};
+
+const SKILLS = {
+    CHAIN: { id: 'chain', name: 'Iron Chain', cd: 5, desc: 'Link destinies. Share damage for 3 turns.' },
+    ECHO: { id: 'echo', name: 'Echo Cast', cd: 6, desc: 'Double speed. Next action triggers twice.' },
+    RPS: { id: 'rps', name: 'Fate Duel', cd: 3, desc: 'Heaven/Earth/Man. Win for ATK Boost.' },
+    GAMBIT: { id: 'gambit', name: 'Gambit', cd: 4, desc: 'Play against Fate. Win to change Era, Heal All.' }
+};
+
+// --- Game State ---
+var Game = Game || {
+    state: 'START', 
+    age: 0,
+    turn: 0,
+    player: {
+        hp: 100, maxHp: 100,
+        stats: { atk: 10 },
+        buffs: { doubleAction: 0, atkUp: 0 },
+        cooldowns: { chain: 0, echo: 0, rps: 0, gambit: 0 }
+    },
+    enemy: {
+        hp: 100, maxHp: 100, atk: 10,
+        buffs: { atkUp: 0 }
+    },
+    status: { linked: 0 },
+    daYun: null
+};
+
+// --- Helpers ---
+const $ = id => document.getElementById(id);
+const rand = arr => arr[Math.floor(Math.random() * arr.length)];
+function getRelation(a, b) {
+    const at = ELEMENTS[a], df = ELEMENTS[b];
+    if (at.generates === df.name) return 'GEN';
+    if (at.overcomes === df.name) return 'OVR';
+    if (df.overcomes === at.name) return 'WEK';
+    return 'NEU';
+}
+function log(msg, type='') {
+    const div = document.createElement('div');
+    div.className = 'log-entry ' + (type === 'turn' ? 'log-turn' : '');
+    if (type === 'danger') div.style.color = '#ff7777';
+    if (type === 'success') div.style.color = '#77ff77';
+    if (type === 'skill') div.style.color = '#c77dff';
+    div.innerHTML = msg;
+    $('log-area').appendChild(div);
+    $('log-area').scrollTop = $('log-area').scrollHeight;
+}
+
+// --- Core Logic ---
+function initGame() {
+    Game.age = 0;
+    Game.player.bazi = [rand(STEMS), rand(STEMS), rand(STEMS), rand(STEMS)]; 
+    Game.player.baziBranches = [rand(BRANCHES), rand(BRANCHES), rand(BRANCHES), rand(BRANCHES)];
+    Game.player.dayMaster = Game.player.bazi[2];
+    
+    // Base stats
+    const el = Game.player.dayMaster.element;
+    Game.player.maxHp = el === 'EARTH' || el === 'WOOD' ? 120 : (el === 'FIRE' ? 80 : 100);
+    Game.player.hp = Game.player.maxHp;
+    Game.player.stats.atk = el === 'METAL' || el === 'FIRE' ? 18 : 12;
+    
+    // Reset Skills
+    for (let k in Game.player.cooldowns) Game.player.cooldowns[k] = 0;
+    
+    updateBaziUI();
+    startLevel();
+}
+
+function updateBaziUI() {
+    ['h','d','m','y'].forEach((k, i) => {
+        const s = Game.player.bazi[i];
+        $(`pillar-${k}`).innerText = s.char;
+        $(`pillar-${k}`).className = `gan ${ELEMENTS[s.element].color}`;
+        $(`pillar-${k}-z`).innerText = Game.player.baziBranches[i];
+    });
+    $('player-avatar').innerText = Game.player.dayMaster.char;
+    $('player-avatar').className = `avatar ${ELEMENTS[Game.player.dayMaster.element].color}`;
+    $('player-el-name').innerText = ELEMENTS[Game.player.dayMaster.element].name;
+}
+
+function startLevel() {
+    Game.age++;
+    Game.turn = 0;
+    Game.status.linked = 0;
+    Game.player.buffs = { doubleAction: 0, atkUp: 0 };
+    Game.enemy.buffs = { atkUp: 0 };
+    
+    $('age-display').innerText = Game.age;
+    $('link-connector').classList.add('hidden');
+    log(`--- Age ${Game.age} ---`, 'turn');
+
+    // Da Yun
+    const cycleIdx = Math.floor((Game.age - 1) / 10) % 5;
+    setDaYun(['WOOD','FIRE','EARTH','METAL','WATER'][cycleIdx]);
+
+    // Enemy
+    const eKey = rand(Object.keys(ELEMENTS));
+    Game.enemy.element = eKey;
+    Game.enemy.name = rand(ENEMY_NAMES[eKey]);
+    Game.enemy.maxHp = 40 + (Game.age * 8);
+    Game.enemy.hp = Game.enemy.maxHp;
+    Game.enemy.atk = 6 + (Game.age * 1.5);
+    
+    $('enemy-avatar').innerText = ELEMENTS[eKey].char;
+    $('enemy-avatar').className = `avatar ${ELEMENTS[eKey].color}`;
+    $('enemy-el-name').innerText = ELEMENTS[eKey].name.toUpperCase();
+    $('enemy-name').innerText = Game.enemy.name;
+    
+    // Calculate Relation for UI
+    updateRelationIndicator();
+    
+    updateUI();
+    $('btn-next').classList.add('hidden');
+    
+    // Enable controls
+    Array.from(document.querySelectorAll('button')).forEach(b => b.disabled = false);
+    updateSkillButtons();
+}
+
+function updateRelationIndicator() {
+    const pEl = Game.player.dayMaster.element;
+    const eEl = Game.enemy.element;
+    const rel = getRelation(pEl, eEl);
+    const elInfo = ELEMENTS[pEl];
+    
+    const ind = $('relation-indicator');
+    
+    if (rel === 'OVR') {
+        ind.innerHTML = `<span style="color:#7f7">YOU COUNTER ENEMY!</span> (DMG x1.5)`;
+        ind.style.borderColor = '#7f7';
+    } else if (rel === 'WEK') {
+        ind.innerHTML = `<span style="color:#f77">ENEMY COUNTERS YOU!</span> (DMG x0.8)`;
+        ind.style.borderColor = '#f77';
+    } else if (rel === 'GEN') {
+        ind.innerHTML = `<span style="color:#ff7">YOU GENERATE ENEMY</span> (Weak Atk)`;
+        ind.style.borderColor = '#ff7';
+    } else {
+        ind.innerHTML = `<span style="color:#aaa">NEUTRAL RELATION</span>`;
+        ind.style.borderColor = '#444';
+    }
+}
+
+function setDaYun(elementKey) {
+    Game.daYun = elementKey;
+    const el = ELEMENTS[elementKey];
+    $('luck-cycle-name').innerText = DA_YUN_NAMES[elementKey];
+    $('luck-cycle-name').className = el.color;
+    
+    const rel = getRelation(elementKey, Game.player.dayMaster.element);
+    const eff = $('luck-cycle-effect');
+    if (rel === 'GEN') { eff.innerText = "Support(Atk+)"; eff.style.color = '#7f7'; Game.player.envMult = 1.3; }
+    else if (rel === 'OVR') { eff.innerText = "Clash(Weak)"; eff.style.color = '#f77'; Game.player.envMult = 0.8; }
+    else if (rel === 'WEK') { eff.innerText = "Drain"; eff.style.color = '#ff7'; Game.player.envMult = 0.9; }
+    else { eff.innerText = "Neutral"; eff.style.color = '#aaa'; Game.player.envMult = 1.0; }
+}
+
+function resolveDamage(source, target, rawAmount, isReflect = false) {
+    let amount = Math.floor(rawAmount);
+    
+    // Buffs
+    if (source === Game.player && source.buffs.atkUp > 0) amount = Math.floor(amount * 1.5);
+    if (source === Game.enemy && source.buffs.atkUp > 0) amount = Math.floor(amount * 1.5);
+
+    target.hp -= amount;
+    
+    // Iron Chain Logic
+    if (Game.status.linked > 0 && !isReflect && amount > 0) {
+        const other = target === Game.player ? Game.enemy : Game.player;
+        log(`[Iron Chain] Shared Damage!`, 'skill');
+        resolveDamage(null, other, amount, true); // Recursion safe due to isReflect
+    }
+    return amount;
+}
+
+function performPlayerAction(type) {
+    if (Game.player.hp <= 0) return;
+
+    // Check Double Cast
+    let repetitions = 1;
+    if (Game.player.buffs.doubleAction > 0) {
+        repetitions = 2;
+        log("[Echo] Double Action Triggered!", 'skill');
+    }
+
+    for (let i = 0; i < repetitions; i++) {
+        if (Game.enemy.hp <= 0) break;
+
+        if (type === 'ATTACK') {
+            const pEl = Game.player.dayMaster.element;
+            const eEl = Game.enemy.element;
+            const rel = getRelation(pEl, eEl);
+            let dmg = Game.player.stats.atk * Game.player.envMult;
+            let msg = "";
+
+            if (rel === 'OVR') { dmg *= 1.5; msg = "(Clash!)"; }
+            if (rel === 'GEN') { dmg *= 0.5; msg = "(Gen)"; }
+            if (rel === 'WEK') { dmg *= 0.8; msg = "(Weak)"; }
+
+            const finalDmg = resolveDamage(Game.player, Game.enemy, dmg);
+            log(`You hit for ${finalDmg} dmg ${msg}`);
+        } 
+        else if (type === 'HEAL') {
+            let heal = 15 * Game.player.envMult;
+            if (Game.player.dayMaster.element === 'WOOD') heal *= 1.5;
+            Game.player.hp = Math.min(Game.player.hp + heal, Game.player.maxHp);
+            log(`Recovered ${Math.floor(heal)} HP`, 'success');
+        }
+    }
+
+    if (type !== 'SKILL_FREE') endPlayerTurn();
+}
+
+function endPlayerTurn() {
+    Game.turn++;
+    tickStatus();
+    updateUI();
+
+    if (Game.enemy.hp <= 0) {
+        log(`Defeated ${Game.enemy.name}!`, 'success');
+        $('btn-next').classList.remove('hidden');
+        disableControls();
+    } else {
+        setTimeout(enemyTurn, 600);
+    }
+}
+
+function enemyTurn() {
+    if (Game.enemy.hp <= 0) return;
+    
+    const pEl = Game.player.dayMaster.element;
+    const eEl = Game.enemy.element;
+    const rel = getRelation(eEl, pEl);
+    let dmg = Game.enemy.atk;
+    let msg = "";
+
+    if (rel === 'OVR') { dmg *= 1.5; msg = "(Critical!)"; }
+    if (rel === 'GEN') { dmg *= 0.8; }
+
+    // Chance to reflect (Metal)
+    if (pEl === 'METAL' && Math.random() > 0.8) {
+        log("Your Metal aura reflected the attack!", 'success');
+        dmg = 0;
+    } else {
+        const finalDmg = resolveDamage(Game.enemy, Game.player, dmg);
+        log(`${Game.enemy.name} hits for ${finalDmg} dmg ${msg}`, 'danger');
+    }
+
+    updateUI();
+    if (Game.player.hp <= 0) {
+        setTimeout(() => {
+            $('game-screen').classList.add('hidden');
+            $('end-screen').classList.remove('hidden');
+            $('end-reason').innerText = `Died at Age ${Game.age}`;
+        }, 1000);
+    }
+}
+
+function tickStatus() {
+    // Reduce cooldowns
+    for (let k in Game.player.cooldowns) {
+        if (Game.player.cooldowns[k] > 0) Game.player.cooldowns[k]--;
+    }
+    // Reduce buffs
+    if (Game.player.buffs.doubleAction > 0) Game.player.buffs.doubleAction--;
+    if (Game.player.buffs.atkUp > 0) Game.player.buffs.atkUp--;
+    if (Game.enemy.buffs.atkUp > 0) Game.enemy.buffs.atkUp--;
+    
+    // Global status
+    if (Game.status.linked > 0) {
+        Game.status.linked--;
+        if (Game.status.linked === 0) {
+            $('link-connector').classList.add('hidden');
+            log("[Chain] Effect ended.", 'info');
+        }
+    }
+    updateSkillButtons();
+}
+
+// --- SKILL IMPLEMENTATION ---
+
+function useSkill(skillKey) {
+    const skill = SKILLS[skillKey];
+    if (Game.player.cooldowns[skill.id] > 0) return;
+    
+    Game.player.cooldowns[skill.id] = skill.cd;
+    log(`> Skill: ${skill.name}`, 'skill');
+
+    if (skillKey === 'CHAIN') {
+        Game.status.linked = 3;
+        $('link-connector').classList.remove('hidden');
+        log("Souls linked! Shared Damage for 3 turns.", 'skill');
+        endPlayerTurn();
+    } 
+    else if (skillKey === 'ECHO') {
+        Game.player.buffs.doubleAction = 2;
+        log("Double cast active!", 'skill');
+        endPlayerTurn();
+    }
+    else if (skillKey === 'RPS') {
+        openModal('RPS');
+    }
+    else if (skillKey === 'GAMBIT') {
+        openModal('GAMBIT');
+    }
+    updateSkillButtons();
+}
+
+function openModal(type) {
+    const overlay = $('modal-overlay');
+    const title = $('modal-title');
+    const body = $('modal-body');
+    const actions = $('modal-actions');
+    
+    overlay.classList.remove('hidden');
+    actions.innerHTML = '';
+    
+    if (type === 'RPS') {
+        title.innerText = "Fate Duel";
+        body.innerHTML = "Heaven beats Earth.<br>Earth beats Man.<br>Man beats Heaven.<br>Choose your stance:";
+        
+        const choices = [
+            {name: 'Heaven', beat: 'Earth'}, {name: 'Earth', beat: 'Man'}, {name: 'Man', beat: 'Heaven'}
+        ];
+        const container = document.createElement('div');
+        container.className = 'rps-choices';
+        
+        choices.forEach(c => {
+            const btn = document.createElement('button');
+            btn.className = 'btn btn-skill';
+            btn.innerText = c.name;
+            btn.style.width = '70px';
+            btn.onclick = () => resolveRPS(c);
+            container.appendChild(btn);
+        });
+        actions.appendChild(container);
+    }
+    else if (type === 'GAMBIT') {
+        title.innerText = "Cosmic Gambit";
+        body.innerHTML = "Challenge Fate.<br>WIN: Full Heal + Good Era.<br>LOSE: Enemy Full Heal + Berserk.";
+        const btn = document.createElement('button');
+        btn.className = 'btn btn-skill';
+        btn.innerText = "Play Move";
+        btn.onclick = resolveGambit;
+        actions.appendChild(btn);
+    }
+}
+
+function closeModal() {
+    $('modal-overlay').classList.add('hidden');
+    endPlayerTurn();
+}
+
+function resolveRPS(playerChoice) {
+    const choices = [{name: 'Heaven', beat: 'Earth'}, {name: 'Earth', beat: 'Man'}, {name: 'Man', beat: 'Heaven'}];
+    const enemyChoice = rand(choices);
+    const body = $('modal-body');
+    
+    let result = "";
+    if (playerChoice.name === enemyChoice.name) {
+        result = `Draw. Nothing happened.`;
+    } else if (playerChoice.beat === enemyChoice.name) {
+        result = `You Won! (You: ${playerChoice.name}, Enemy: ${enemyChoice.name})<br>Attack Boosted!`;
+        Game.player.buffs.atkUp = 3;
+    } else {
+        result = `You Lost... (You: ${playerChoice.name}, Enemy: ${enemyChoice.name})<br>Enemy Attack Boosted!`;
+        Game.enemy.buffs.atkUp = 3;
+    }
+    
+    body.innerHTML = result;
+    $('modal-actions').innerHTML = `<button class="btn" onclick="closeModal()">Confirm</button>`;
+}
+
+function resolveGambit() {
+    const body = $('modal-body');
+    body.innerHTML = "Thinking... <span style='font-size:20px'>⚪⚫⚪</span>";
+    
+    setTimeout(() => {
+        const win = Math.random() > 0.5; // 50/50
+        if (win) {
+            body.innerHTML = "【VICTORY】Fate Rewritten!<br>Full Heal & Era Changed to Support.";
+            Game.player.hp = Game.player.maxHp;
+            const pEl = Game.player.dayMaster.element;
+            const genElKey = Object.keys(ELEMENTS).find(k => ELEMENTS[k].generates === ELEMENTS[pEl].name);
+            setDaYun(genElKey);
+        } else {
+            body.innerHTML = "【DEFEAT】Fate is Cruel...<br>Enemy Healed & Enraged!";
+            Game.enemy.hp = Game.enemy.maxHp;
+            Game.enemy.buffs.atkUp = 5;
+        }
+        $('modal-actions').innerHTML = `<button class="btn" onclick="closeModal()">Accept</button>`;
+    }, 1000);
+}
+
+// --- UI Updates ---
+function updateUI() {
+    const php = Math.max(0, Game.player.hp), pmax = Game.player.maxHp;
+    $('player-hp-bar').style.width = (php/pmax*100) + '%';
+    $('player-hp').innerText = Math.floor(php);
+    $('player-max-hp').innerText = pmax;
+
+    const ehp = Math.max(0, Game.enemy.hp), emax = Game.enemy.maxHp;
+    $('enemy-hp-bar').style.width = (ehp/emax*100) + '%';
+    $('enemy-hp').innerText = Math.floor(ehp);
+    $('enemy-max-hp').innerText = emax;
+    
+    // Status Icons
+    let pStatus = "";
+    if (Game.player.buffs.doubleAction > 0) pStatus += `<div class="status-icon" style="color:#c77dff">x2</div>`;
+    if (Game.player.buffs.atkUp > 0) pStatus += `<div class="status-icon" style="color:red">ATK</div>`;
+    if (Game.status.linked > 0) pStatus += `<div class="status-icon" style="color:white">LINK</div>`;
+    $('player-status').innerHTML = pStatus;
+    
+    let eStatus = "";
+    if (Game.enemy.buffs.atkUp > 0) eStatus += `<div class="status-icon" style="color:red">ATK</div>`;
+    if (Game.status.linked > 0) eStatus += `<div class="status-icon" style="color:white">LINK</div>`;
+    $('enemy-status').innerHTML = eStatus;
+}
+
+function updateSkillButtons() {
+    for (let key in SKILLS) {
+        const sk = SKILLS[key];
+        const btn = $(`skill-${sk.id}`);
+        const cd = Game.player.cooldowns[sk.id];
+        
+        if (cd > 0) {
+            btn.disabled = true;
+            btn.innerHTML = `<div>${cd}</div><div style="font-size:0.6rem">CD</div>`;
+            btn.style.borderColor = '#444';
+            btn.style.color = '#666';
+        } else {
+            btn.disabled = false;
+            btn.innerHTML = `<div>${sk.name}</div>`;
+            btn.style.borderColor = 'var(--skill-color)';
+            btn.style.color = 'var(--skill-color)';
+        }
+    }
+}
+
+function disableControls() {
+    Array.from(document.querySelectorAll('button')).forEach(b => {
+        if (b.id !== 'btn-next' && b.id !== 'btn-restart') b.disabled = true;
+    });
+}
+
+// --- Listeners ---
+$('btn-start').onclick = () => { $('start-screen').classList.add('hidden'); $('game-screen').classList.remove('hidden'); initGame(); };
+$('btn-restart').onclick = () => { $('end-screen').classList.add('hidden'); $('game-screen').classList.remove('hidden'); initGame(); };
+$('btn-attack').onclick = () => performPlayerAction('ATTACK');
+$('btn-heal').onclick = () => performPlayerAction('HEAL');
+$('btn-next').onclick = startLevel;
+
+$('skill-chain').onclick = () => useSkill('CHAIN');
+$('skill-echo').onclick = () => useSkill('ECHO');
+$('skill-rps').onclick = () => useSkill('RPS');
+$('skill-gambit').onclick = () => useSkill('GAMBIT');
+
+// --- Canvas BG ---
+(function() {
+    const canvas = $('ink-canvas'), ctx = canvas.getContext('2d');
+    let particles = [];
+    const resize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; };
+    window.onresize = resize; resize();
+
+    class InkParticle {
+        constructor() { this.reset(); }
+        reset() {
+            this.x = Math.random() * canvas.width; this.y = Math.random() * canvas.height;
+            this.size = Math.random() * 60 + 20; this.a = 0;
+            this.va = Math.random() * 0.005 + 0.002;
+        }
+        draw() {
+            this.a += this.va;
+            if (this.a > 0.2) this.a = 0; 
+            ctx.beginPath();
+            let g = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.size);
+            g.addColorStop(0, `rgba(30,30,30,${Math.sin(this.a * Math.PI * 5)})`);
+            g.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = g; ctx.arc(this.x, this.y, this.size, 0, 7); ctx.fill();
+            if(Math.random() > 0.99) this.reset();
+        }
+    }
+    for(let i=0;i<30;i++) particles.push(new InkParticle());
+    function anim() { ctx.clearRect(0,0,canvas.width,canvas.height); particles.forEach(p=>p.draw()); requestAnimationFrame(anim); }
+    anim();
+})();
+
+</script>
+</body>
+</html>

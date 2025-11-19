@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>ChemLab v2.2 | English Version</title>
+    <style>
+        :root {
+            --bg-color: #0f0f13;
+            --panel-color: #1e1e24;
+            --text-color: #ecf0f1;
+            --accent-color: #00d2ff;
+            --modal-bg: rgba(30, 30, 36, 0.95);
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            touch-action: none;
+        }
+
+        /* Drag & Drop Overlay */
+        body.drag-over::after {
+            content: "📂 Drop File to Load";
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 210, 255, 0.3);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2rem;
+            color: white;
+            z-index: 999;
+            backdrop-filter: blur(5px);
+            pointer-events: none;
+        }
+
+        /* Header */
+        header {
+            width: 100%;
+            background: var(--panel-color);
+            border-bottom: 1px solid #333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 15px;
+            box-sizing: border-box;
+            height: 60px;
+        }
+
+        h1 { margin: 0; font-size: 1.2rem; letter-spacing: -1px;}
+        
+        #info-panel {
+            flex-grow: 1;
+            text-align: center;
+            font-size: 0.85rem;
+            color: #aaa;
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+        }
+
+        /* Main Game Area */
+        #lab-container {
+            position: relative;
+            margin: 10px;
+            border: 2px solid #444;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            background: #000;
+        }
+
+        canvas {
+            display: block;
+            cursor: crosshair;
+            image-rendering: pixelated;
+            width: 100%;
+            max-width: 800px;
+        }
+
+        /* Element Palette */
+        #controls {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 4px;
+            width: 95%;
+            max-width: 800px;
+            padding: 5px;
+            background: var(--panel-color);
+            border-top: 1px solid #333;
+            box-sizing: border-box;
+        }
+
+        .element-btn {
+            background: #2c3e50;
+            color: #bdc3c7;
+            border: 1px solid #34495e;
+            padding: 6px 2px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.7rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            user-select: none;
+        }
+
+        .element-btn strong { font-size: 1rem; display: block; margin-bottom: 2px; }
+        .element-btn.active { border-color: #fff; box-shadow: inset 0 0 0 2px var(--accent-color); color: #fff; background: #000; }
+
+        /* Category Colors */
+        .cat-solid { border-top: 3px solid #95a5a6; }
+        .cat-liquid { border-top: 3px solid #3498db; }
+        .cat-gas { border-top: 3px solid #e74c3c; }
+        .cat-tool { border-top: 3px solid #f1c40f; }
+
+        /* Modals & Tooltips */
+        #cursor-tooltip {
+            position: absolute;
+            pointer-events: none;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            display: none;
+            border: 1px solid #555;
+            z-index: 1000;
+            transform: translate(15px, 15px);
+        }
+
+        #status-modal {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.9);
+            padding: 20px;
+            border: 2px solid #2ed573;
+            color: #2ed573;
+            font-size: 1.2rem;
+            display: none;
+            z-index: 100;
+            text-align: center;
+            pointer-events: none;
+        }
+
+        /* Import Modal */
+        #import-modal {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+        .modal-content {
+            background: var(--panel-color);
+            padding: 20px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 500px;
+            border: 1px solid #444;
+            text-align: center;
+        }
+        textarea {
+            width: 100%;
+            height: 100px;
+            background: #111;
+            color: #0f0;
+            border: 1px solid #333;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 0.8rem;
+        }
+        
+        .toolbar-btn {
+            background: #333; color: #ddd; border: 1px solid #555; 
+            padding: 5px 10px; cursor: pointer; font-size: 0.8rem;
+            margin-left: 5px;
+        }
+        .toolbar-btn:hover { background: #444; }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>⚗️ ChemLab</h1>
+    <div id="info-panel">Select an element...</div>
+    <div>
+        <button class="toolbar-btn" onclick="startChallenge()" style="color: #a55eea;">🎲 Challenge</button>
+        <button class="toolbar-btn" onclick="openImportModal()">📂 Load</button>
+        <button class="toolbar-btn" onclick="saveGame()">💾 Save</button>
+        <button class="toolbar-btn" onclick="resetGrid()" style="color:#ff6b6b;">🗑️</button>
+    </div>
+</header>
+
+<div id="lab-container">
+    <canvas id="canvas" width="800" height="500"></canvas>
+    <div id="status-modal">✅ Success!</div>
+</div>
+<div id="cursor-tooltip">Tool</div>
+
+<div id="import-modal">
+    <div class="modal-content">
+        <h3>📂 Load Simulation</h3>
+        <p style="font-size:0.8rem; color:#aaa;">Paste save code below OR select a file</p>
+        <textarea id="import-text" placeholder='{"w":200,"h":125,"d":...}'></textarea>
+        <div style="display:flex; justify-content:space-between; margin-top:10px;">
+            <button class="toolbar-btn" onclick="document.getElementById('file-input').click()">📁 Browse File</button>
+            <div>
+                <button class="toolbar-btn" onclick="loadFromText()" style="background:var(--accent-color); color:black; font-weight:bold;">Load JSON</button>
+                <button class="toolbar-btn" onclick="closeImportModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+</div>
+<input type="file" id="file-input" accept=".json" onchange="handleFileSelect(this)" style="display:none">
+
+<div id="controls">
+    <button class="element-btn cat-solid active" onclick="setElement('GLASS')"><strong>Gl</strong>Glass</button>
+    <button class="element-btn cat-solid" onclick="setElement('METAL')"><strong>Fe</strong>Iron</button>
+    <button class="element-btn cat-solid" onclick="setElement('SODIUM')"><strong>Na</strong>Sodium</button>
+    <button class="element-btn cat-solid" onclick="setElement('SALT')"><strong>Cl</strong>Salt</button>
+    <button class="element-btn cat-solid" onclick="setElement('WOOD')"><strong>C</strong>Wood</button>
+    <button class="element-btn cat-solid" onclick="setElement('ICE')"><strong>Ice</strong>Ice</button>
+    
+    <button class="element-btn cat-liquid" onclick="setElement('WATER')"><strong>H₂O</strong>Water</button>
+    <button class="element-btn cat-liquid" onclick="setElement('ACID')"><strong>HCl</strong>Acid</button>
+    <button class="element-btn cat-liquid" onclick="setElement('BASE')"><strong>OH</strong>Base</button>
+    <button class="element-btn cat-liquid" onclick="setElement('OIL')"><strong>Oil</strong>Oil</button>
+    <button class="element-btn cat-liquid" onclick="setElement('LAVA')"><strong>Lv</strong>Lava</button>
+    <button class="element-btn cat-liquid" onclick="setElement('NITRO')"><strong>N</strong>Nitro</button>
+
+    <button class="element-btn cat-gas" onclick="setElement('H2')"><strong>H₂</strong>H2</button>
+    <button class="element-btn cat-gas" onclick="setElement('O2')"><strong>O₂</strong>O2</button>
+    <button class="element-btn cat-gas" onclick="setElement('METHANE')"><strong>CH₄</strong>Methane</button>
+    <button class="element-btn cat-gas" onclick="setElement('FIRE')"><strong>🔥</strong>Fire</button>
+    
+    <button class="element-btn cat-tool" onclick="setElement('ERASER')"><strong>❌</strong>Eraser</button>
+    <button class="element-btn cat-tool" onclick="openImportModal()"><strong>📂</strong>Load</button>
+</div>
+
+<script>
+    // --- Configuration ---
+    const CANVAS_WIDTH = 800;
+    const CANVAS_HEIGHT = 500;
+    const SCALE = 4; 
+    const COLS = CANVAS_WIDTH / SCALE; // 200
+    const ROWS = CANVAS_HEIGHT / SCALE; // 125
+
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const tooltip = document.getElementById('cursor-tooltip');
+    
+    const T = {
+        EMPTY: 0, GLASS: 1, WATER: 2, FIRE: 3, 
+        ACID: 4, BASE: 5, SALT: 6, 
+        METAL: 7, H2: 8, O2: 9, CO2: 10,
+        WOOD: 11, SMOKE: 12, STEAM: 13,
+        SODIUM: 14, OIL: 15, LAVA: 16,
+        ICE: 17, METHANE: 18, NITRO: 19
+    };
+
+    const PROPS = {
+        [T.EMPTY]: { color: [0,0,0], state: 2, density: 0 },
+        [T.GLASS]: { color: [100,100,100], state: 0, density: 100 },
+        [T.METAL]: { color: [149, 165, 166], state: 0, density: 100 },
+        [T.SODIUM]: { color: [200, 200, 220], state: 0, density: 100 },
+        [T.WOOD]:   { color: [139, 69, 19], state: 0, density: 100, burnable: true },
+        [T.ICE]:    { color: [174, 214, 241], state: 0, density: 0.9, melt: T.WATER },
+        [T.SALT]:   { color: [255, 255, 255], state: 0, density: 2.5, powder: true }, 
+        
+        [T.WATER]: { color: [52, 152, 219], state: 1, density: 1.0 },
+        [T.ACID]:  { color: [46, 204, 113], state: 1, density: 1.1 },
+        [T.BASE]:  { color: [155, 89, 182], state: 1, density: 1.1 },
+        [T.OIL]:   { color: [241, 196, 15], state: 1, density: 0.8, burnable: true },
+        [T.LAVA]:  { color: [231, 76, 60], state: 1, density: 2.0 },
+        [T.NITRO]: { color: [46, 204, 113], state: 1, density: 1.2, explosive: true },
+
+        [T.H2]:    { color: [255, 182, 193], state: 2, density: -1 }, 
+        [T.O2]:    { color: [135, 206, 250], state: 2, density: 0 },  
+        [T.METHANE]:{ color: [100, 255, 218], state: 2, density: -0.5, burnable: true},
+        [T.CO2]:   { color: [127, 140, 141], state: 2, density: 1.5 }, 
+        [T.STEAM]: { color: [220, 220, 230], state: 2, density: -0.5 },
+        [T.SMOKE]: { color: [80, 80, 80], state: 2, density: -0.2 },
+        [T.FIRE]:  { color: [255, 69, 0], state: 2, density: -0.1 }
+    };
+
+    let grid = [];
+    let currentType = T.GLASS;
+    let currentName = "Glass";
+    let isMouseDown = false;
+    let challengeMode = null;
+    
+    function initGrid() {
+        grid = new Array(COLS).fill(0).map(() => new Array(ROWS).fill(0).map(() => ({ type: T.EMPTY, life: 0 })));
+    }
+
+    // --- Core Loop ---
+    function update() {
+        for (let y = ROWS - 1; y >= 0; y--) {
+            const xOrder = Math.random() > 0.5 
+                ? Array.from({length: COLS}, (_, i) => i) 
+                : Array.from({length: COLS}, (_, i) => COLS - 1 - i);
+
+            for (let x of xOrder) {
+                const cell = grid[x][y];
+                if (cell.type === T.EMPTY || cell.moved) continue;
+                
+                const type = cell.type;
+                const prop = PROPS[type];
+                let moved = false;
+
+                // State Change (Ice Melt)
+                if (type === T.ICE && Math.random() > 0.998) {
+                    grid[x][y] = { type: T.WATER }; moved = true;
+                }
+
+                // Physics
+                if (!moved) {
+                    if (prop.state === 1 || prop.powder) {
+                        if (tryMove(x, y, x, y+1, type)) moved = true;
+                        else if (tryMove(x, y, x-1, y+1, type)) moved = true;
+                        else if (tryMove(x, y, x+1, y+1, type)) moved = true;
+                        else if (prop.state === 1) {
+                            if (tryMove(x, y, x-1, y, type)) moved = true;
+                            else if (tryMove(x, y, x+1, y, type)) moved = true;
+                        }
+                    } else if (prop.state === 2 && type !== T.FIRE) {
+                        let dirY = prop.density < 0.5 ? -1 : 1;
+                        if (tryMove(x, y, x, y+dirY, type)) moved = true;
+                        else if (tryMove(x, y, x-1, y+dirY, type)) moved = true;
+                        else if (tryMove(x, y, x+1, y+dirY, type)) moved = true;
+                        else if (tryMove(x, y, x-1, y, type)) moved = true;
+                        else if (tryMove(x, y, x+1, y, type)) moved = true;
+
+                        if (type === T.FIRE || type === T.SMOKE || type === T.STEAM) {
+                            cell.life--;
+                            if (cell.life <= 0) {
+                                if (type === T.STEAM && Math.random() > 0.8) grid[x][y] = {type: T.WATER, life:0}; 
+                                else grid[x][y] = {type: T.EMPTY, life:0};
+                            }
+                        }
+                    }
+                }
+
+                // Reaction
+                if (!moved || Math.random() < 0.2) react(x, y, cell);
+            }
+        }
+        for(let x=0; x<COLS; x++) for(let y=0; y<ROWS; y++) grid[x][y].moved = false;
+        draw();
+        checkChallenge();
+        requestAnimationFrame(update);
+    }
+
+    function tryMove(x1, y1, x2, y2, type) {
+        if (x2 < 0 || x2 >= COLS || y2 < 0 || y2 >= ROWS) return false;
+        const target = grid[x2][y2];
+        const myDensity = PROPS[type].density;
+        const targetDensity = PROPS[target.type].density;
+
+        if (target.type === T.EMPTY) {
+            movePixel(x1, y1, x2, y2);
+            return true;
+        }
+        if (PROPS[target.type].state !== 0 && PROPS[type].state !== 0) {
+             if (y2 > y1 && myDensity > targetDensity) { swapPixel(x1, y1, x2, y2); return true; }
+             if (y2 < y1 && myDensity < targetDensity) { swapPixel(x1, y1, x2, y2); return true; }
+             if (y2 == y1 && myDensity > targetDensity && Math.random()>0.5) { swapPixel(x1, y1, x2, y2); return true; }
+        }
+        return false;
+    }
+
+    function movePixel(x1, y1, x2, y2) {
+        grid[x2][y2] = grid[x1][y1];
+        grid[x1][y1] = { type: T.EMPTY, life: 0 };
+        grid[x2][y2].moved = true;
+    }
+    function swapPixel(x1, y1, x2, y2) {
+        const temp = grid[x1][y1];
+        grid[x1][y1] = grid[x2][y2];
+        grid[x2][y2] = temp;
+        grid[x1][y1].moved = true;
+        grid[x2][y2].moved = true;
+    }
+
+    function react(x, y, cell) {
+        const type = cell.type;
+        const dirs = [[0,1], [0,-1], [1,0], [-1,0]];
+        for (let d of dirs) {
+            const nx = x + d[0], ny = y + d[1];
+            if (nx<0 || nx>=COLS || ny<0 || ny>=ROWS) continue;
+            const neighbor = grid[nx][ny];
+            const nType = neighbor.type;
+            if (nType === T.EMPTY) continue;
+
+            if (type === T.ACID && nType === T.BASE) {
+                grid[x][y] = { type: T.WATER }; grid[nx][ny] = { type: T.SALT, powder: true }; return;
+            }
+            if (type === T.ACID && nType === T.METAL) {
+                if (Math.random() < 0.05) { grid[x][y] = { type: T.H2 }; grid[nx][ny] = { type: T.SALT, powder: true }; } return;
+            }
+            if (type === T.FIRE) {
+                if (nType === T.H2 || nType === T.METHANE) { explode(nx, ny, 5); grid[nx][ny] = { type: T.WATER }; } 
+                else if (nType === T.OIL || nType === T.WOOD) { grid[nx][ny] = { type: T.FIRE, life: 150 }; } 
+                else if (nType === T.NITRO) { explode(nx, ny, 15); } 
+                else if (nType === T.WATER) { grid[x][y] = { type: T.EMPTY }; grid[nx][ny] = { type: T.STEAM, life: 100 }; }
+                else if (nType === T.ICE) { grid[nx][ny] = { type: T.WATER }; }
+            }
+            if (type === T.SODIUM && nType === T.WATER) {
+                explode(x, y, 6); grid[x][y] = { type: T.BASE }; grid[nx][ny] = { type: T.H2 }; grid[nx][ny-1] = { type: T.FIRE, life: 50 }; return;
+            }
+            if (type === T.LAVA && nType === T.WATER) {
+                grid[x][y] = { type: T.GLASS }; grid[nx][ny] = { type: T.STEAM, life: 200 };
+            }
+        }
+    }
+
+    function explode(x, y, radius) {
+        for (let dx = -radius; dx <= radius; dx++) {
+            for (let dy = -radius; dy <= radius; dy++) {
+                if (dx*dx + dy*dy <= radius*radius) {
+                    const nx = x+dx, ny = y+dy;
+                    if (nx>=0 && nx<COLS && ny>=0 && ny<ROWS) {
+                        if (grid[nx][ny].type !== T.GLASS) {
+                             if (Math.random() > 0.7) grid[nx][ny] = { type: T.FIRE, life: 20 };
+                             else grid[nx][ny] = { type: T.EMPTY };
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    function draw() {
+        ctx.fillStyle = "#000";
+        ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+        for (let x = 0; x < COLS; x++) {
+            for (let y = 0; y < ROWS; y++) {
+                const cell = grid[x][y];
+                if (cell.type !== T.EMPTY) {
+                    const prop = PROPS[cell.type];
+                    const color = prop.color;
+                    const variation = (x+y)%2 === 0 ? 0 : 5; 
+                    if (cell.type === T.FIRE) ctx.fillStyle = `rgb(${255}, ${Math.random()*200}, 0)`;
+                    else ctx.fillStyle = `rgb(${color[0]+variation}, ${color[1]+variation}, ${color[2]+variation})`;
+                    ctx.fillRect(x * SCALE, y * SCALE, SCALE, SCALE);
+                }
+            }
+        }
+    }
+
+    // --- Interactions ---
+    function setElement(name) {
+        currentType = T[name];
+        currentName = document.querySelector(`button[onclick="setElement('${name}')"]`).innerText.split('\n').pop();
+        document.querySelectorAll('.element-btn').forEach(b => b.classList.remove('active'));
+        const btn = Array.from(document.querySelectorAll('.element-btn')).find(b => b.innerText.includes(nameToText(name)));
+        if (btn) btn.classList.add('active');
+        else if(name === 'ERASER') event.target.classList.add('active');
+        showStatus("Tool: " + currentName);
+    }
+    
+    function nameToText(name) { 
+        const m={'GLASS':'Glass','METAL':'Iron','SODIUM':'Sodium','SALT':'Salt','WOOD':'Wood','ICE':'Ice','WATER':'Water','ACID':'Acid','BASE':'Base','OIL':'Oil','LAVA':'Lava','NITRO':'Nitro','H2':'H2','O2':'O2','METHANE':'Methane','FIRE':'Fire'}; 
+        return m[name]||''; 
+    }
+
+    function handleInput(e) { isMouseDown = true; paint(e); updateTooltip(e); }
+    canvas.addEventListener('mousedown', handleInput);
+    canvas.addEventListener('touchstart', e => { handleInput(e.touches[0]); e.preventDefault(); }, {passive: false});
+    window.addEventListener('mouseup', () => { isMouseDown = false; tooltip.style.display = 'none'; });
+    window.addEventListener('touchend', () => { isMouseDown = false; tooltip.style.display = 'none'; });
+    canvas.addEventListener('mousemove', e => { if (isMouseDown) paint(e); updateTooltip(e); });
+    canvas.addEventListener('touchmove', e => { if (isMouseDown) paint(e.touches[0]); e.preventDefault(); }, {passive: false});
+
+    function updateTooltip(e) {
+        tooltip.style.display = 'block';
+        tooltip.style.left = (e.clientX + 15) + 'px';
+        tooltip.style.top = (e.clientY + 15) + 'px';
+        tooltip.innerText = currentName;
+    }
+
+    function paint(e) {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        const mx = Math.floor(((e.clientX - rect.left) * scaleX) / SCALE);
+        const my = Math.floor(((e.clientY - rect.top) * scaleY) / SCALE);
+        const brushSize = 3;
+        for (let dx = -brushSize; dx <= brushSize; dx++) {
+            for (let dy = -brushSize; dy <= brushSize; dy++) {
+                if (dx*dx + dy*dy < brushSize*brushSize) {
+                    const nx = mx + dx;
+                    const ny = my + dy;
+                    if (nx >= 0 && nx < COLS && ny >= 0 && ny < ROWS) {
+                        if (currentType === T.GLASS || currentType === T.EMPTY || grid[nx][ny].type === T.EMPTY || currentType === T.FIRE) {
+                            let life = 0;
+                            if (currentType === T.FIRE) life = 100;
+                            if (currentType === T.STEAM || currentType === T.SMOKE) life = 300;
+                            grid[nx][ny] = { type: currentType, life: life };
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // --- Save & Load ---
+    
+    function saveGame() {
+        const simplified = grid.map(col => col.map(c => c.type));
+        const dataStr = JSON.stringify({w: COLS, h: ROWS, d: simplified});
+        
+        // Download
+        const blob = new Blob([dataStr], {type: "application/json"});
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = "chemlab_save_" + Date.now() + ".json";
+        a.click();
+
+        // Copy to Clipboard
+        navigator.clipboard.writeText(dataStr).then(() => {
+            showStatus("💾 Saved & Copied to Clipboard!");
+        }).catch(() => {
+            showStatus("💾 File Saved.");
+        });
+    }
+
+    function handleFileSelect(input) {
+        const file = input.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => processLoadData(e.target.result);
+        reader.readAsText(file);
+        input.value = '';
+        closeImportModal();
+    }
+
+    function loadFromText() {
+        const text = document.getElementById('import-text').value;
+        if (text) processLoadData(text);
+        closeImportModal();
+    }
+
+    function processLoadData(jsonString) {
+        try {
+            const data = JSON.parse(jsonString);
+            let gridData = data;
+            if (data.d) gridData = data.d; 
+            
+            if (data.w && data.w !== COLS) {
+                alert("Save file resolution mismatch (" + data.w + " vs " + COLS + ")");
+                return;
+            }
+
+            resetGrid();
+            for(let x=0; x<COLS; x++) {
+                for(let y=0; y<ROWS; y++) {
+                    if (gridData[x] && gridData[x][y] !== undefined) {
+                        const t = gridData[x][y];
+                        grid[x][y] = { type: t, life: (t===T.FIRE?100:0) };
+                    }
+                }
+            }
+            showStatus("📂 Loaded Successfully!");
+        } catch (e) {
+            console.error(e);
+            alert("Error loading file: Invalid format");
+        }
+    }
+
+    // Drag & Drop
+    document.body.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        document.body.classList.add('drag-over');
+    });
+    document.body.addEventListener('dragleave', () => document.body.classList.remove('drag-over'));
+    document.body.addEventListener('drop', (e) => {
+        e.preventDefault();
+        document.body.classList.remove('drag-over');
+        const file = e.dataTransfer.files[0];
+        if (file && file.name.endsWith('.json')) {
+            const reader = new FileReader();
+            reader.onload = (ev) => processLoadData(ev.target.result);
+            reader.readAsText(file);
+        }
+    });
+
+    // Modal Controls
+    function openImportModal() { document.getElementById('import-modal').style.display = 'flex'; }
+    function closeImportModal() { document.getElementById('import-modal').style.display = 'none'; }
+    function showStatus(msg) { document.getElementById('info-panel').innerText = msg; }
+    
+    function resetGrid() {
+        initGrid();
+        challengeMode = null;
+        showStatus("Lab Cleared");
+        document.getElementById('status-modal').style.display = 'none';
+    }
+
+    // --- Challenge System ---
+    function startChallenge() {
+        resetGrid();
+        const scenarios = [
+            {
+                title: "Collect Hydrogen", desc: "React acid with iron and collect H2 gas at the top.",
+                setup: () => {
+                    for(let x=50; x<150; x++) grid[x][20] = {type:T.GLASS};
+                    for(let y=20; y<60; y++) { grid[50][y]={type:T.GLASS}; grid[150][y]={type:T.GLASS}; }
+                    for(let x=80; x<120; x++) grid[x][ROWS-10] = {type:T.METAL};
+                    for(let y=ROWS-20; y<ROWS-10; y++) { grid[80][y]={type:T.GLASS}; grid[120][y]={type:T.GLASS}; }
+                },
+                check: () => {
+                    let count = 0;
+                    for(let x=51; x<149; x++) for(let y=21; y<60; y++) if(grid[x][y].type === T.H2) count++;
+                    return count > 200;
+                }
+            },
+            {
+                title: "Arctic Drilling", desc: "Melt the ice layer to release the Methane trapped below.",
+                setup: () => {
+                    for(let x=0; x<COLS; x++) for(let y=50; y<80; y++) grid[x][y] = {type:T.ICE};
+                    for(let x=20; x<COLS-20; x++) for(let y=85; y<100; y++) grid[x][y] = {type:T.METHANE};
+                    for(let x=0; x<COLS; x++) grid[x][101] = {type:T.GLASS};
+                },
+                check: () => {
+                     let escapeCount = 0;
+                     for(let x=0; x<COLS; x++) for(let y=0; y<40; y++) if(grid[x][y].type === T.METHANE || grid[x][y].type === T.FIRE) escapeCount++;
+                     return escapeCount > 15;
+                }
+            }
+        ];
+        const c = scenarios[Math.floor(Math.random() * scenarios.length)];
+        c.setup();
+        challengeMode = c;
+        showStatus(`Goal: ${c.title} - ${c.desc}`);
+    }
+
+    function checkChallenge() {
+        if (challengeMode && challengeMode.check()) {
+            const modal = document.getElementById('status-modal');
+            modal.style.display = 'block';
+            challengeMode = null;
+            setTimeout(() => modal.style.display='none', 3000);
+        }
+    }
+
+    initGrid();
+    update();
+</script>
+</body>
+</html>

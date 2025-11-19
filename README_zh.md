@@ -1,6 +1,6 @@
 # Awesome Gemini 3.0 Pro Game Collection
 
-**[中文]** | [English]
+**[中文]** | [[English](./README.md)]
 
 ## 📖 项目简介 (Introduction)
 
@@ -12,49 +12,63 @@
 
 -----
 
-## 🎮 游戏列表 (Game List)
+## 🎮 已上线游戏 (Playable Now)
 
-我们目前正在并行开发以下核心游戏模组：
+以下游戏已包含完整的 HTML 文件，可直接在浏览器中运行。
 
-### 1\. ⚔️ Sky Voxel Drifter (天际方块漂移)
+### 1. ☯️ Karma Flow (流年：天命肉鸽)
+**文件入口：** `game/KarmaFlow.html` (中文) / `game/KarmaFlow_en.html` (英文)
 
-  * **类型：** 3D 动作 / 跑酷
-  * **核心玩法：** 高性能的网页版“Minecraft + 鞘翅飞行”。体验极致的空气动力学，使用烟花加速，在程序化生成的浮空岛屿间穿梭。
-  * **技术栈：** Three.js, Cannon.js (物理引擎)。
-  * ![Alt Text](./svger//sky-voxel.svg)
+* **类型：** 生辰八字 Roguelike / 卡牌构筑
+* **核心玩法：**
+    * **八字即构筑：** 开局随机生成生辰八字，五行（金木水火土）决定了你的基础属性和技能卡组。
+    * **大运流年：** 每一关代表一岁，你需要利用五行生克原理，在“流年不利”时存活，在“大运助身”时爆发。
+* **立即试玩：**
+    * [🀄 启动中文版](./game/KarmaFlow.html)
+    * [🇺🇸 启动英文版](./game/KarmaFlow_en.html)
 
-### 2\. 🌌 The Infinite Text Dungeon (无限文字地牢)
+![Karma Flow](./svger/karma-flow.svg)
 
-  * **类型：** AI Native RPG / 交互式小说
-  * **核心玩法：**
-      * 一个没有边界的文字冒险游戏。你的每一个离谱操作（“试图说服史莱姆投资比特币”）都会被 AI 合理化并推动剧情。
-      * **实时视觉化：** 每次场景描述更新时，AI 会实时生成一张像素风格的背景图，增强沉浸感。
-  * **API 配置 (BYOK):**
-      * 用户需在设置面板提供 `API Key`, `Base URL`, `Model Name`。
-      * 支持接入 OpenAI, Anthropic, 或任何兼容 OpenAI 格式的 Local LLM。
-  * **降级模式 (Fallback Mode):**
-      * 如果没有提供 API Key，游戏将自动切换到\*\*“精选剧本模式”\*\*。
-      * 玩家将在预设好的、高质量的静态分支剧情中进行游玩（不消耗 Token，但剧情有限）。
-       * ![Alt Text](./svger/text-dungeon.svg)
+### 2. 🧪 Element AI (元素炼金实验室)
+**文件入口：** `game/ElementChemistry.html` (中文) / `game/Chemlab.html` (英文)
 
-### 3\. 🏙️ Dream City Builder (梦境城市)
+* **类型：** AI 驱动合成 / 益智解谜
+* **核心玩法：**
+    * **无限合成：** 从基础元素开始，两两组合，合成宇宙万物。
+    * **AI 裁决：** 与传统固定配方的合成游戏不同，**AI 实时判定**你的组合结果。它根据化学逻辑或天马行空的创意来生成新元素。
+* **立即试玩：**
+    * [🀄 启动中文版 (ElementChemistry)](./game/ElementChemistry.html)
+    * *(备用中文版: [ElementAl](./game/ElementAl.html))*
+    * [🇺🇸 启动英文版 (Chemlab)](./game/Chemlab.html)
 
-  * **类型：** 放置建造 / 生成式 UI
-  * **核心玩法：**
-      * **Text-to-City：** 你输入描述（例如：“一座建立在巨大的发光蘑菇上的赛博朋克城市”）。
-      * **Gemini 3.0 驱动：** 游戏后端调用 Gemini 3.0 Pro，直接输出复杂的 **SVG 代码**。
-      * 网页前端实时渲染这些 SVG，构建出独一无二的建筑物和装饰物。
-  * **技术点：** 利用 LLM 强大的代码生成能力来替代传统的 3D建模流程。
-  *  * ![Alt Text](./svger/city-builder.svg)
+### 3. ⚔️ Sky Voxel Drifter (天际方块漂移)
+**文件入口：** `fly.html`
 
-### 4\. ☯️ Karma Flow (流年：天命肉鸽)
+* **类型：** 3D 动作 / 跑酷
+* **核心玩法：**
+    * 高性能的网页版“Minecraft + 鞘翅飞行”模拟器。
+    * 体验极致的空气动力学，使用烟花加速，在程序化生成的浮空岛屿间穿梭。
+* **技术栈：** Three.js, Cannon.js (物理引擎)。
+* **立即试玩：** [✈️ 启动飞行模拟器](./fly.html)
 
-  * **类型：** 生辰八字 Roguelike
-  * **核心玩法：**
-      * **八字即构筑：** 开局随机生成生辰八字，五行（金木水火土）决定了你的基础属性和技能卡组。
-      * **大运流年：** 每一关代表一岁，你需要利用五行生克原理，在“流年不利”时存活，在“大运助身”时爆发。
-  * **技术栈：** Lunar-javascript, Pixi.js。
- * ![Alt Text](./svger/karma-flow.svg)
+![Sky Voxel](./svger/sky-voxel.svg)
+
+-----
+
+## 🚧 开发中 (Roadmap)
+
+以下模组正在积极研发中，敬请期待：
+
+### 🌌 The Infinite Text Dungeon (无限文字地牢)
+* **核心概念：** 一个没有边界的文字冒险游戏。你的每一个离谱操作（“试图说服史莱姆投资比特币”）都会被 AI 合理化并推动剧情，并实时生成像素背景图。
+* **当前状态：** *Coming Soon*
+![Text Dungeon](./svger/text-dungeon.svg)
+
+### 🏙️ Dream City Builder (梦境城市)
+* **核心概念：** Text-to-City 放置建造。后端调用 Gemini 3.0 Pro 直接输出复杂的 SVG 代码，前端实时渲染构建赛博朋克城市。
+* **当前状态：** *Coming Soon*
+![City Builder](./svger/city-builder.svg)
+
 -----
 
 ## ⚙️ 架构与配置 (Architecture & Config)
@@ -63,17 +77,17 @@
 
 ### 全局设置面板 (Global Settings)
 
-在网页右上角，点击 ⚙️ 图标可打开配置：
+在网页右上角（支持 AI 的游戏中），点击 ⚙️ 图标可打开配置：
 
 ```json
 {
   "ai_provider": "custom", // or "gemini", "openai"
-  "base_url": "https://generativelanguage.googleapis.com/v1beta/openai/",
+  "base_url": "[https://generativelanguage.googleapis.com/v1beta/openai/](https://generativelanguage.googleapis.com/v1beta/openai/)",
   "api_key": "sk-proj-...",
   "model_name": "gemini-1.5-pro-latest",
   "image_generation_enabled": true
 }
-```
+````
 
   * **连接状态：** 🟢 已连接 / 🔴 离线（将使用本地降级模式）
 
@@ -81,9 +95,19 @@
 
 ## 🚀 快速开始 (Getting Started)
 
+由于这些是独立的 WebGL/HTML5 应用，您有两种方式运行：
+
+### 方法 1: 直接游玩 (推荐)
+
+直接进入文件夹，双击上述列表中的 `.html` 文件，使用浏览器（推荐 Chrome/Edge）打开即可游玩。
+
+### 方法 2: 开发者模式
+
+如果您需要修改代码或贡献：
+
 ```bash
 # 1. 克隆项目
-git clone https://github.com/your-username/awesome-gemini-game.git
+git clone [https://github.com/your-username/awesome-gemini-game.git](https://github.com/your-username/awesome-gemini-game.git)
 
 # 2. 进入目录
 cd awesome-gemini-game
@@ -95,6 +119,6 @@ npm install
 npm run dev
 ```
 
-打开浏览器访问 `http://localhost:3000` 即可开始体验。
+# 打开浏览器访问 `http://localhost:3000` 即可开始体验。
 
------
+```

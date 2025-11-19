@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Element Alchemist v2.0 | 元素炼金术士</title>
+    <style>
+        :root {
+            --bg-color: #1a1a1a;
+            --panel-color: #2d2d2d;
+            --text-color: #e0e0e0;
+            --accent-color: #00d2ff;
+            --danger-color: #ff4757;
+            --success-color: #2ed573;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Header & HUD */
+        header {
+            width: 100%;
+            background: var(--panel-color);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            z-index: 10;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 20px;
+            box-sizing: border-box;
+        }
+
+        h1 { margin: 0; font-size: 1.2rem; display: flex; align-items: center; gap: 10px; }
+        .badge { background: var(--accent-color); color: #000; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; }
+
+        #challenge-display {
+            flex-grow: 1;
+            text-align: center;
+            font-size: 1rem;
+            color: #ccc;
+            padding: 0 20px;
+        }
+
+        #challenge-display.active {
+            color: var(--accent-color);
+            font-weight: bold;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse { 0% { opacity: 0.8; } 50% { opacity: 1; } 100% { opacity: 0.8; } }
+
+        /* Game Container */
+        #game-container {
+            position: relative;
+            margin: 10px;
+            border: 2px solid #444;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+
+        canvas {
+            display: block;
+            cursor: crosshair;
+            background-color: #000;
+            image-rendering: pixelated;
+        }
+
+        /* Controls */
+        #controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: center;
+            max-width: 900px;
+            padding: 5px;
+        }
+
+        .control-group {
+            display: flex;
+            gap: 5px;
+            background: rgba(255,255,255,0.05);
+            padding: 5px;
+            border-radius: 8px;
+        }
+
+        button, .file-upload {
+            background: var(--panel-color);
+            color: var(--text-color);
+            border: 1px solid #555;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        button:hover, .file-upload:hover { background: #444; transform: translateY(-2px); }
+        button.active { border-color: var(--accent-color); background: #333; box-shadow: 0 0 10px rgba(0, 210, 255, 0.2); }
+        
+        /* Element specific styles */
+        .btn-fire { border-bottom: 3px solid #ff4757; }
+        .btn-water { border-bottom: 3px solid #1e90ff; }
+        .btn-plant { border-bottom: 3px solid #2ed573; }
+        .btn-oil { border-bottom: 3px solid #e1b12c; }
+        .btn-wall { border-bottom: 3px solid #747d8c; }
+        .btn-bh { border-bottom: 3px solid #a55eea; }
+        .btn-ag { border-bottom: 3px solid #00d2ff; }
+
+        #ai-btn {
+            background: linear-gradient(45deg, #2b5876, #4e4376);
+            border: none;
+            color: white;
+            font-weight: bold;
+        }
+
+        #save-btn { border-color: #f1c40f; color: #f1c40f; }
+        
+        /* Hidden file input */
+        #file-input { display: none; }
+
+        #status-modal {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.9);
+            padding: 20px 40px;
+            border: 2px solid var(--success-color);
+            color: var(--success-color);
+            font-size: 2rem;
+            display: none;
+            pointer-events: none;
+            z-index: 100;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>⚛️ EA <span class="badge">v2.0</span></h1>
+    <div id="challenge-display">自由模式：尽情创造吧</div>
+    <div style="display:flex; gap:5px;">
+        <button id="save-btn" onclick="saveGame()">💾 保存(JSON)</button>
+        <button onclick="document.getElementById('file-input').click()">📂 加载</button>
+        <button id="reset-btn" onclick="resetGrid()">🗑️ 清空</button>
+    </div>
+    <input type="file" id="file-input" accept=".json" onchange="loadGame(this)">
+</header>
+
+<div id="game-container">
+    <canvas id="canvas" width="800" height="500"></canvas>
+    <div id="status-modal">任务完成!</div>
+</div>
+
+<div id="controls">
+    <div class="control-group">
+        <button class="btn-wall active" onclick="setElement('WALL')">🧱 墙壁</button>
+        <button class="btn-water" onclick="setElement('WATER')">💧 水</button>
+        <button class="btn-fire" onclick="setElement('FIRE')">🔥 火</button>
+        <button class="btn-plant" onclick="setElement('PLANT')">🌿 植物</button>
+        <button class="btn-oil" onclick="setElement('OIL')">🛢️ 油</button>
+        <button class="btn-ag" onclick="setElement('ANTIGRAVITY')">🎈 反重力</button>
+        <button class="btn-bh" onclick="setElement('BLACKHOLE')">⚫ 黑洞</button>
+        <button onclick="setElement('ERASER')">🧽 橡皮擦</button>
+    </div>
+    <div class="control-group">
+        <button id="ai-btn" onclick="startAIChallenge()">🤖 随机 AI 挑战</button>
+    </div>
+</div>
+
+<script>
+    // --- 配置与常量 ---
+    const CANVAS_WIDTH = 800;
+    const CANVAS_HEIGHT = 500;
+    const SCALE = 4; 
+    const COLS = CANVAS_WIDTH / SCALE;
+    const ROWS = CANVAS_HEIGHT / SCALE;
+
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    const TYPES = {
+        EMPTY: 0, WALL: 1, WATER: 2, FIRE: 3, PLANT: 4,
+        OIL: 5, ANTIGRAVITY: 6, BLACKHOLE: 7, STEAM: 8, SMOKE: 9
+    };
+
+    const COLORS = {
+        [TYPES.EMPTY]: [0, 0, 0],
+        [TYPES.WALL]: [120, 120, 120],
+        [TYPES.WATER]: [30, 144, 255],
+        [TYPES.FIRE]: [255, 69, 0],
+        [TYPES.PLANT]: [46, 204, 113],
+        [TYPES.OIL]: [200, 180, 0],
+        [TYPES.ANTIGRAVITY]: [0, 255, 255],
+        [TYPES.BLACKHOLE]: [40, 0, 60],
+        [TYPES.STEAM]: [200, 200, 220],
+        [TYPES.SMOKE]: [80, 80, 80]
+    };
+
+    let grid = [];
+    let currentType = TYPES.WALL;
+    let isMouseDown = false;
+    let challengeMode = null;
+    let frameCount = 0;
+
+    function initGrid() {
+        grid = new Array(COLS).fill(0).map(() => new Array(ROWS).fill(0).map(() => ({ type: TYPES.EMPTY, life: 0 })));
+    }
+
+    // --- 物理引擎核心 ---
+    function update() {
+        frameCount++;
+        
+        for (let y = ROWS - 1; y >= 0; y--) {
+            const xOrder = Math.random() > 0.5 
+                ? Array.from({length: COLS}, (_, i) => i) 
+                : Array.from({length: COLS}, (_, i) => COLS - 1 - i);
+
+            for (let x of xOrder) {
+                const cell = grid[x][y];
+                if (cell.type === TYPES.EMPTY || cell.moved) continue;
+
+                switch (cell.type) {
+                    case TYPES.WATER:
+                    case TYPES.OIL:
+                        simulateLiquid(x, y, cell.type);
+                        break;
+                    case TYPES.FIRE:
+                        simulateFire(x, y);
+                        break;
+                    case TYPES.ANTIGRAVITY:
+                    case TYPES.STEAM:
+                    case TYPES.SMOKE:
+                        simulateGas(x, y, cell.type);
+                        break;
+                    case TYPES.BLACKHOLE:
+                        simulateBlackHole(x, y);
+                        break;
+                }
+            }
+        }
+
+        // 重置标记
+        for(let x=0; x<COLS; x++) for(let y=0; y<ROWS; y++) grid[x][y].moved = false;
+
+        draw();
+        checkChallenge();
+        requestAnimationFrame(update);
+    }
+
+    function move(x1, y1, x2, y2) {
+        if (grid[x2][y2].type === TYPES.EMPTY) {
+            grid[x2][y2] = grid[x1][y1];
+            grid[x1][y1] = { type: TYPES.EMPTY, life: 0 };
+            grid[x2][y2].moved = true;
+            return true;
+        }
+        return false;
+    }
+
+    function swap(x1, y1, x2, y2) {
+        const temp = grid[x1][y1];
+        grid[x1][y1] = grid[x2][y2];
+        grid[x2][y2] = temp;
+        grid[x1][y1].moved = true;
+        grid[x2][y2].moved = true;
+    }
+
+    function simulateLiquid(x, y, type) {
+        if (y + 1 < ROWS) {
+            const below = grid[x][y+1].type;
+            if (below === TYPES.EMPTY) {
+                move(x, y, x, y + 1);
+                return;
+            } else if (below === TYPES.FIRE) {
+                if (type === TYPES.WATER) {
+                    grid[x][y+1] = { type: TYPES.STEAM, life: 100 };
+                    grid[x][y] = { type: TYPES.EMPTY };
+                }
+                return;
+            } else if (type === TYPES.WATER && below === TYPES.OIL) {
+                swap(x, y, x, y + 1);
+                return;
+            }
+        }
+        const dir = Math.random() > 0.5 ? 1 : -1;
+        if (y + 1 < ROWS && x + dir >= 0 && x + dir < COLS && grid[x + dir][y + 1].type === TYPES.EMPTY) {
+             move(x, y, x + dir, y + 1);
+             return;
+        }
+        if (x + dir >= 0 && x + dir < COLS && grid[x + dir][y].type === TYPES.EMPTY) {
+            move(x, y, x + dir, y);
+        }
+    }
+
+    function simulateGas(x, y, type) {
+        if (type === TYPES.STEAM || type === TYPES.SMOKE) {
+            grid[x][y].life--;
+            if (grid[x][y].life <= 0) {
+                // 蒸汽有概率变回水（冷凝），特别是如果它碰到了墙
+                let condenseChance = 0.005;
+                // 简单的“触墙冷凝”检测
+                if (y-1 >= 0 && grid[x][y-1].type === TYPES.WALL) condenseChance = 0.1;
+                
+                if (type === TYPES.STEAM && Math.random() < condenseChance) {
+                    grid[x][y] = { type: TYPES.WATER };
+                } else {
+                    grid[x][y] = { type: TYPES.EMPTY };
+                }
+                return;
+            }
+        }
+
+        if (y - 1 >= 0) {
+            if (grid[x][y-1].type === TYPES.EMPTY) {
+                move(x, y, x, y - 1);
+                return;
+            } else if (grid[x][y-1].type === TYPES.WATER || grid[x][y-1].type === TYPES.OIL) {
+                swap(x, y, x, y-1);
+                return;
+            }
+        }
+        const dir = Math.random() > 0.5 ? 1 : -1;
+        if (y - 1 >= 0 && x + dir >= 0 && x + dir < COLS && grid[x + dir][y - 1].type === TYPES.EMPTY) {
+            move(x, y, x + dir, y - 1);
+        }
+    }
+
+    function simulateFire(x, y) {
+        if (Math.random() > 0.92) {
+            grid[x][y] = { type: TYPES.SMOKE, life: 60 };
+            return;
+        }
+        for (let dx = -1; dx <= 1; dx++) {
+            for (let dy = -1; dy <= 1; dy++) {
+                const nx = x + dx, ny = y + dy;
+                if (nx >= 0 && nx < COLS && ny >= 0 && ny < ROWS) {
+                    const neighbor = grid[nx][ny].type;
+                    if (neighbor === TYPES.PLANT || neighbor === TYPES.OIL) {
+                        grid[nx][ny] = { type: TYPES.FIRE };
+                    } else if (neighbor === TYPES.WATER) {
+                        grid[nx][ny] = { type: TYPES.STEAM, life: 100 };
+                        grid[x][y] = { type: TYPES.EMPTY };
+                    }
+                }
+            }
+        }
+    }
+
+    function simulateBlackHole(x, y) {
+        for (let dx = -2; dx <= 2; dx++) {
+            for (let dy = -2; dy <= 2; dy++) {
+                const nx = x + dx, ny = y + dy;
+                if (nx >= 0 && nx < COLS && ny >= 0 && ny < ROWS) {
+                    if (dx === 0 && dy === 0) continue;
+                    if (grid[nx][ny].type !== TYPES.EMPTY && grid[nx][ny].type !== TYPES.BLACKHOLE) {
+                        if (Math.random() > 0.5) grid[nx][ny] = { type: TYPES.EMPTY };
+                        else {
+                            if (nx > x && grid[nx-1][ny].type === TYPES.EMPTY) move(nx, ny, nx-1, ny);
+                            if (nx < x && grid[nx+1][ny].type === TYPES.EMPTY) move(nx, ny, nx+1, ny);
+                            if (ny > y && grid[nx][ny-1].type === TYPES.EMPTY) move(nx, ny, nx, ny-1);
+                            if (ny < y && grid[nx][ny+1].type === TYPES.EMPTY) move(nx, ny, nx, ny+1);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // --- 渲染与交互 ---
+    function draw() {
+        ctx.fillStyle = "#000";
+        ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+        for (let x = 0; x < COLS; x++) {
+            for (let y = 0; y < ROWS; y++) {
+                const cell = grid[x][y];
+                if (cell.type !== TYPES.EMPTY) {
+                    const color = COLORS[cell.type];
+                    const variation = Math.random() * 20 - 10; 
+                    ctx.fillStyle = `rgb(${color[0] + variation}, ${color[1] + variation}, ${color[2] + variation})`;
+                    ctx.fillRect(x * SCALE, y * SCALE, SCALE, SCALE);
+                }
+            }
+        }
+    }
+
+    function setElement(typeName) {
+        if (typeName === 'ERASER') currentType = TYPES.EMPTY;
+        else currentType = TYPES[typeName];
+        document.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+        const activeBtn = Array.from(document.querySelectorAll('button')).find(b => b.innerText.includes(elementToIcon(typeName)));
+        if(activeBtn) activeBtn.classList.add('active');
+        else if (typeName === 'ERASER') event.target.classList.add('active');
+    }
+    
+    function elementToIcon(name) {
+        const map = { 'WALL':'🧱', 'WATER':'💧', 'FIRE':'🔥', 'PLANT':'🌿', 'OIL':'🛢️', 'ANTIGRAVITY':'🎈', 'BLACKHOLE':'⚫' };
+        return map[name] || '';
+    }
+
+    canvas.addEventListener('mousedown', e => { isMouseDown = true; paint(e); });
+    canvas.addEventListener('mouseup', () => isMouseDown = false);
+    canvas.addEventListener('mousemove', e => { if (isMouseDown) paint(e); });
+    canvas.addEventListener('touchstart', e => { isMouseDown = true; paint(e.touches[0]); e.preventDefault(); }, {passive: false});
+    canvas.addEventListener('touchend', () => isMouseDown = false);
+    canvas.addEventListener('touchmove', e => { if (isMouseDown) paint(e.touches[0]); e.preventDefault(); }, {passive: false});
+
+    function paint(e) {
+        const rect = canvas.getBoundingClientRect();
+        const mx = Math.floor((e.clientX - rect.left) / SCALE);
+        const my = Math.floor((e.clientY - rect.top) / SCALE);
+        const brushSize = 3;
+        for (let dx = -brushSize; dx <= brushSize; dx++) {
+            for (let dy = -brushSize; dy <= brushSize; dy++) {
+                if (dx*dx + dy*dy < brushSize*brushSize) {
+                    const nx = mx + dx;
+                    const ny = my + dy;
+                    if (nx >= 0 && nx < COLS && ny >= 0 && ny < ROWS) {
+                        if (currentType === TYPES.WALL || currentType === TYPES.EMPTY || grid[nx][ny].type === TYPES.EMPTY) {
+                             grid[nx][ny] = { type: currentType, life: 0 };
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    function resetGrid() {
+        initGrid();
+        challengeMode = null;
+        document.getElementById('challenge-display').innerText = "自由模式：尽情创造吧";
+        document.getElementById('challenge-display').classList.remove('active');
+        document.getElementById('status-modal').style.display = 'none';
+    }
+
+    // --- 保存与加载 (JSON) ---
+    function saveGame() {
+        const simplifiedGrid = grid.map(col => col.map(cell => cell.type === TYPES.EMPTY ? 0 : { t: cell.type, l: cell.life }));
+        const data = {
+            version: "2.0",
+            timestamp: new Date().toISOString(),
+            cols: COLS,
+            rows: ROWS,
+            grid: simplifiedGrid
+        };
+        const blob = new Blob([JSON.stringify(data)], {type: "application/json"});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = "element_alchemist_save_" + Date.now() + ".json";
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    function loadGame(input) {
+        const file = input.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const data = JSON.parse(e.target.result);
+                if (data.cols !== COLS || data.rows !== ROWS) {
+                    alert("错误：存档的分辨率与当前游戏不匹配！");
+                    return;
+                }
+                resetGrid();
+                for(let x=0; x<COLS; x++) {
+                    for(let y=0; y<ROWS; y++) {
+                        const val = data.grid[x][y];
+                        if (val === 0) grid[x][y] = { type: TYPES.EMPTY, life: 0 };
+                        else grid[x][y] = { type: val.t, life: val.l, moved: false };
+                    }
+                }
+                alert("✅ 存档加载成功！");
+            } catch (err) {
+                alert("❌ 无法读取文件，格式可能已损坏。");
+                console.error(err);
+            }
+        };
+        reader.readAsText(file);
+        input.value = ''; // 重置input允许重复选择同一文件
+    }
+
+    // --- AI 挑战系统 ---
+    function startAIChallenge() {
+        resetGrid();
+        const scenarios = [
+            {
+                title: "🔥 丛林净化",
+                desc: "在不破坏两侧围墙的情况下，烧掉至少90%的植物。",
+                setup: () => {
+                    for(let y=50; y<ROWS; y++) { grid[10][y] = {type:TYPES.WALL}; grid[COLS-10][y] = {type:TYPES.WALL}; }
+                    for(let x=11; x<COLS-10; x++) for(let y=ROWS-1; y>ROWS-40; y--) if(Math.random()>0.3) grid[x][y] = {type:TYPES.PLANT};
+                },
+                check: () => {
+                    let plantCount = 0, wallBroken = false;
+                    for(let x=0; x<COLS; x++) for(let y=0; y<ROWS; y++) {
+                        if(grid[x][y].type === TYPES.PLANT) plantCount++;
+                        if((x==10 || x==COLS-10) && y>50 && grid[x][y].type === TYPES.EMPTY) wallBroken = true;
+                    }
+                    if (wallBroken) return "failed";
+                    return plantCount < 50 ? "success" : "running";
+                }
+            },
+            {
+                title: "🛢️ 原油泄漏处理",
+                desc: "油浮在水面上了！请清除所有油污（可以烧掉），但必须保留至少50%的水。",
+                setup: () => {
+                    // 容器
+                    for(let x=20; x<COLS-20; x++) grid[x][ROWS-5] = {type:TYPES.WALL};
+                    for(let y=ROWS-40; y<ROWS-5; y++) { grid[20][y] = {type:TYPES.WALL}; grid[COLS-20][y] = {type:TYPES.WALL}; }
+                    // 水
+                    for(let x=25; x<COLS-25; x++) for(let y=ROWS-25; y<ROWS-5; y++) grid[x][y] = {type:TYPES.WATER};
+                    // 油
+                    for(let x=25; x<COLS-25; x++) for(let y=ROWS-30; y<ROWS-25; y++) grid[x][y] = {type:TYPES.OIL};
+                },
+                check: () => {
+                    let waterCount = 0, oilCount = 0;
+                    for(let x=0; x<COLS; x++) for(let y=0; y<ROWS; y++) {
+                        if(grid[x][y].type === TYPES.WATER) waterCount++;
+                        if(grid[x][y].type === TYPES.OIL) oilCount++;
+                    }
+                    if (waterCount < 800) return "failed"; // 水太少了
+                    return oilCount < 10 ? "success" : "running";
+                }
+            },
+            {
+                title: "☁️ 人工降雨",
+                desc: "干旱来袭！利用上方的蒸汽，让它们冷凝成水，填满底部的池塘（提示：蒸汽碰到冷墙壁更容易凝结）。",
+                setup: () => {
+                    // 顶部蒸汽室
+                    for(let x=50; x<COLS-50; x++) {
+                        grid[x][10] = {type:TYPES.WALL};
+                        grid[x][40] = {type:TYPES.WALL}; // 底部有孔
+                        if(x > 90 && x < 110) grid[x][40] = {type:TYPES.EMPTY}; // 开口
+                    }
+                    for(let y=10; y<40; y++) { grid[50][y]={type:TYPES.WALL}; grid[COLS-50][y]={type:TYPES.WALL}; }
+                    // 填充蒸汽
+                    for(let x=52; x<COLS-52; x++) for(let y=12; y<38; y++) grid[x][y] = {type:TYPES.STEAM, life:500}; // 长寿蒸汽
+
+                    // 底部池塘
+                    for(let x=80; x<120; x++) grid[x][ROWS-10] = {type:TYPES.WALL};
+                    for(let y=ROWS-20; y<ROWS-10; y++) { grid[80][y]={type:TYPES.WALL}; grid[120][y]={type:TYPES.WALL}; }
+                },
+                check: () => {
+                    let waterInPond = 0;
+                    for(let x=81; x<120; x++) for(let y=ROWS-20; y<ROWS-10; y++) {
+                        if(grid[x][y].type === TYPES.WATER) waterInPond++;
+                    }
+                    return waterInPond > 100 ? "success" : "running";
+                }
+            },
+            {
+                title: "🛡️ 防火隔离带",
+                desc: "左边着火了！在火势蔓延到右边的植物林之前，利用橡皮擦、墙壁或水建立隔离带！",
+                setup: () => {
+                    // 地面
+                    for(let x=0; x<COLS; x++) grid[x][ROWS-2] = {type:TYPES.WALL};
+                    // 铺满植物
+                    for(let x=0; x<COLS; x++) for(let y=ROWS-15; y<ROWS-2; y++) {
+                        if(Math.random()>0.2) grid[x][y] = {type:TYPES.PLANT};
+                    }
+                    // 左边点火
+                    for(let x=0; x<10; x++) for(let y=ROWS-15; y<ROWS-2; y++) grid[x][y] = {type:TYPES.FIRE};
+                },
+                check: () => {
+                    let rightPlants = 0;
+                    // 检查右半部分的植物
+                    for(let x=Math.floor(COLS/2); x<COLS; x++) for(let y=0; y<ROWS; y++) {
+                        if(grid[x][y].type === TYPES.PLANT) rightPlants++;
+                    }
+                    
+                    // 检查火是否已经灭了
+                    let fireCount = 0;
+                    for(let x=0; x<COLS; x++) for(let y=0; y<ROWS; y++) if(grid[x][y].type === TYPES.FIRE) fireCount++;
+
+                    if (rightPlants < 50) return "failed"; // 右边被烧光了
+                    if (fireCount === 0 && rightPlants >= 50) return "success";
+                    return "running";
+                }
+            }
+        ];
+
+        const scenario = scenarios[Math.floor(Math.random() * scenarios.length)];
+        scenario.setup();
+        
+        const display = document.getElementById('challenge-display');
+        display.innerText = scenario.title + " - " + scenario.desc;
+        display.classList.add('active');
+        
+        challengeMode = scenario;
+    }
+
+    function checkChallenge() {
+        if (!challengeMode) return;
+        
+        const result = challengeMode.check();
+        const modal = document.getElementById('status-modal');
+
+        if (result === "success") {
+            showModal("✅ 任务完成!", "#2ed573");
+            challengeMode = null;
+        } else if (result === "failed") {
+            showModal("❌ 任务失败!", "#ff4757");
+            challengeMode = null;
+        }
+    }
+
+    function showModal(text, color) {
+        const modal = document.getElementById('status-modal');
+        modal.innerText = text;
+        modal.style.color = color;
+        modal.style.borderColor = color;
+        modal.style.display = "block";
+        setTimeout(() => modal.style.display = "none", 3000);
+    }
+
+    initGrid();
+    update();
+
+</script>
+</body>
+</html>
