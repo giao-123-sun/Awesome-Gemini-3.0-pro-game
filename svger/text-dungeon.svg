@@ -1,0 +1,24 @@
+<svg width="800" height="300" viewBox="0 0 800 300" xmlns="http://www.w3.org/2000/svg">
+  <rect width="800" height="300" rx="15" fill="#000000" />
+  
+  <circle cx="30" cy="30" r="6" fill="#ff5f56" />
+  <circle cx="50" cy="30" r="6" fill="#ffbd2e" />
+  <circle cx="70" cy="30" r="6" fill="#27c93f" />
+  
+  <text x="50" y="100" font-family="Courier New, monospace" font-size="20" fill="#33ff00">
+    > You enter the dark cave...
+  </text>
+  <text x="50" y="130" font-family="Courier New, monospace" font-size="20" fill="#33ff00" opacity="0.7">
+    > AI generating visual context...
+  </text>
+  
+  <g transform="translate(600, 150) scale(4)">
+    <rect x="-2" y="10" width="4" height="10" fill="#a855f7" />
+    <rect x="-6" y="8" width="12" height="2" fill="#a855f7" />
+    <rect x="-2" y="-15" width="4" height="23" fill="#e2e8f0" />
+    <rect x="4" y="-5" width="2" height="2" fill="#33ff00" />
+    <rect x="-5" y="0" width="2" height="2" fill="#33ff00" />
+  </g>
+  
+  <text x="400" y="250" font-family="Courier New, monospace" font-size="24" fill="#a855f7" text-anchor="middle" font-weight="bold">THE INFINITE TEXT DUNGEON</text>
+</svg>
